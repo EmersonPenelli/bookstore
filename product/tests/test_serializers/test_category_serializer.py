@@ -11,6 +11,6 @@ class TestCategorySerializer(TestCase):
 
   def test_order_serializer(self):
     serializer_data = self.category_serializer.data
+    self.assertEqual(serializer_data['title'], 'food')
 
-    self.assertEquals(serializer_data['title'], 'food')
 
