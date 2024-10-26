@@ -1,7 +1,7 @@
-# `python-base` sets up all our shared environment variables
-FROM python:3.11.2-slim as python-base
+# Use Python 3.12 slim image as base
+FROM python:3.12-slim as python-base
 
-# python
+# Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     # prevents python creating .pyc files
     PYTHONDONTWRITEBYTECODE=1 \
@@ -13,7 +13,7 @@ ENV PYTHONUNBUFFERED=1 \
     \
     # poetry
     # https://python-poetry.org/docs/configuration/#using-environment-variables
-    POETRY_VERSION=1.0.3 \
+    POETRY_VERSION=1.7.1 \
     # make poetry install to this location
     POETRY_HOME="/opt/poetry" \
     # make poetry create the virtual environment in the project's root
@@ -35,63 +35,38 @@ RUN apt-get update \
         # deps for installing poetry
         curl \
         # deps for building python deps
-        build-essential \
-        zlib1g-dev \
-        libjpeg-dev \
-        libfreetype6-dev \
-        liblcms2-dev \
-        libopenjp2-7-dev \
-        libtiff5-dev \
-        libwebp-dev \
-        tcl8.6-dev \
-        tk8.6-dev \
-        python3-tk \
-        libharfbuzz-dev \
-        libfribidi-dev \
-        libxcb1-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+        build-essential
 
-# Debug step: Check Python and pip versions
-RUN python --version && pip --version
-
-# install poetry - respects $POETRY_VERSION & $POETRY_HOME
-RUN pip install poetry
-
-# Debug step: Check Poetry installation
-RUN poetry --version
+# Install Poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
 
 # install postgres dependencies inside of Docker
 RUN apt-get update \
     && apt-get -y install libpq-dev gcc \
     && pip install psycopg2
 
-# Debug step: Check installed packages
-RUN pip list
-
-# copy project requirement files here to ensure they will be cached.
+# Set working directory
 WORKDIR $PYSETUP_PATH
+
+# Copy project files
 COPY poetry.lock pyproject.toml ./
 
-# Debug step: List contents of the working directory
-RUN ls -al /opt/pysetup
-
-# install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
+# Install project dependencies
 RUN poetry install --no-dev
-
-# Debug step: List installed packages after poetry install
-RUN poetry show
 
 # quicker install as runtime deps are already installed
 RUN poetry install
 
+# Set app directory
 WORKDIR /app
 
+# Copy application code
 COPY . /app/
 
-# Debug step: List contents of /app directory
-RUN ls -al /app
-
+# Expose port
 EXPOSE 8000
 
+# Run the application
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+
